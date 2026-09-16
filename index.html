@@ -5,208 +5,226 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crypto & Market Dashboard</title>
   
-  <!-- Tailwind CSS Stable v3 (Fixed for local file opening) -->
+  <!-- Tailwind CSS Stable v3 -->
   <script src="https://tailwindcss.com"></script>
 
   <!-- Chart.js via CDN -->
   <script src="https://jsdelivr.net"></script>
-
-  <!-- React & Babel CDNs -->
-  <script src="https://unpkg.com" crossorigin></script>
-  <script src="https://unpkg.com" crossorigin></script>
-  <script src="https://unpkg.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
 
-  <div id="root"></div>
+  <!-- Loading Screen Overlay -->
+  <div id="loading" class="flex items-center justify-center h-screen fixed inset-0 bg-slate-950 z-50 transition-opacity duration-300">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+  </div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+  <div class="max-w-6xl mx-auto p-4 md:p-8">
+    <!-- Header Dashboard panel -->
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-6 gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+          📈 MarketPulse <span class="text-xs bg-emerald-500/10 text-emerald-400 font-medium px-2.5 py-0.5 rounded-full border border-emerald-500/20">Live</span>
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">Real-time asset tracking overview powered by CoinGecko API</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-slate-500">Auto-refreshes every 60 seconds</p>
+      </div>
+    </header>
 
-    // List of Cryptos to track (CoinGecko IDs)
+    <!-- Grid Layout Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Sidebar Left Side: Asset list selections -->
+      <div class="lg:col-span-1 flex flex-col gap-3">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 px-1">Watchlist</h2>
+        <div id="watchlist" class="flex flex-col gap-3">
+          <!-- Crypto buttons will be injected here inject -->
+        </div>
+      </div>
+
+      <!-- Main Center Area: Asset Chart details -->
+      <div class="lg:col-span-2 flex flex-col bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <img id="active-icon" src="" alt="" class="w-6 h-6 hidden" />
+              <h2 id="active-title" class="text-xl font-bold text-white">Select an Asset</h2>
+            </div>
+            <div class="flex items-baseline gap-3 mt-2">
+              <span id="active-price" class="text-3xl font-black font-mono"></span>
+              <span id="active-change" class="text-sm font-bold font-mono"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Graph Canvas Anchor -->
+        <div class="grow min-h-[300px] w-full relative">
+          <canvas id="cryptoChart"></canvas>
+        </div>
+
+        <!-- Bottom Stats Breakdown panel -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-800/60 text-xs">
+          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
+            <p class="text-slate-500 font-medium mb-1">Market Cap</p>
+            <p id="stat-cap" class="font-bold font-mono text-slate-300">--</p>
+          </div>
+          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
+            <p class="text-slate-500 font-medium mb-1">24h High</p>
+            <p id="stat-high" class="font-bold font-mono text-emerald-400">--</p>
+          </div>
+          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900 col-span-2 sm:col-span-1">
+            <p class="text-slate-500 font-medium mb-1">24h Low</p>
+            <p id="stat-low" class="font-bold font-mono text-red-400">--</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
     const cryptoIds = ['bitcoin', 'ethereum', 'solana', 'cardano'];
+    let globalMarketData = [];
+    let currentChart = null;
 
-    function App() {
-      const [marketData, setMarketData] = useState([]);
-      const [selectedCrypto, setSelectedCrypto] = useState(null);
-      const [loading, setLoading] = useState(true);
-      const chartRef = useRef(null);
-      const chartInstanceRef = useRef(null);
-
-      // Fetch prices and basic market info
-      useEffect(() => {
-        const fetchMarketData = async () => {
-          try {
-            const response = await fetch(
-              `https://coingecko.com{cryptoIds.join(',')}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`
-            );
-            const data = await response.json();
-            setMarketData(data);
-            if (data.length > 0 && !selectedCrypto) {
-              setSelectedCrypto(data[0]); // Default to Bitcoin on load
-            }
-            setLoading(false);
-          } catch (error) {
-            console.error("Error fetching market data:", error);
-            setLoading(false);
-          }
-        };
-
-        fetchMarketData();
-        const interval = setInterval(fetchMarketData, 60000); // Auto-refresh every 60s
-        return () => clearInterval(interval);
-      }, []);
-
-      // Re-render chart whenever the selected crypto changes
-      useEffect(() => {
-        if (!selectedCrypto || !chartRef.current) return;
-
-        // Destroy previous chart instance to prevent memory leaks/overlapping bugs
-        if (chartInstanceRef.current) {
-          chartInstanceRef.current.destroy();
+    async function fetchMarketData() {
+      try {
+        const response = await fetch(
+          `https://coingecko.com{cryptoIds.join(',')}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`
+        );
+        const data = await response.json();
+        globalMarketData = data;
+        
+        renderWatchlist();
+        
+        // Auto-select first coin on initial boot
+        if (data.length > 0) {
+          selectCrypto(data[0].id);
         }
 
-        const ctx = chartRef.current.getContext('2d');
-        
-        // Extract sparkline (last 7 days price trend) data from CoinGecko response
-        const sparklineData = selectedCrypto.sparkline_in_7d.price;
-        // Generate placeholder labels for the timeline
-        const labels = sparklineData.map((_, index) => index); 
+        // Hide loader interface
+        document.getElementById('loading').classList.add('opacity-0', 'pointer-events-none');
+      } catch (error) {
+        console.error("API error or rate limit hit:", error);
+      }
+    }
 
-        const isPositive = selectedCrypto.price_change_percentage_24h >= 0;
-        const mainColor = isPositive ? '#10b981' : '#ef4444'; // Green if up, Red if down
+    function renderWatchlist() {
+      const container = document.getElementById('watchlist');
+      container.innerHTML = '';
 
-        chartInstanceRef.current = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: `${selectedCrypto.name} Price (7D Trend)`,
-              data: sparklineData,
-              borderColor: mainColor,
-              borderWidth: 2,
-              pointRadius: 0, // Hides dots for a cleaner financial sparkline look
-              tension: 0.2, // Smooths out the line angles
-              fill: true,
-              backgroundColor: ctx => {
-                const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)');
-                gradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
-                return gradient;
-              }
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              x: { display: false }, // Hides bottom axis numbers
-              y: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: '#94a3b8', callback: (value) => '$' + value.toLocaleString() }
-              }
-            }
-          }
-        });
+      globalMarketData.forEach(coin => {
+        const priceUp = coin.price_change_percentage_24h >= 0;
+        const button = document.createElement('button');
+        button.className = `w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all bg-slate-900/50 border-slate-800 hover:border-slate-700 asset-btn`;
+        button.id = `btn-${coin.id}`;
+        button.onclick = () => selectCrypto(coin.id);
 
-      }, [selectedCrypto]);
-
-      if (loading) {
-        return (
-          <div class="flex items-center justify-center h-screen">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+        button.innerHTML = `
+          <div class="flex items-center gap-3">
+            <img src="${coin.image}" alt="${coin.name}" class="w-8 h-8 rounded-full" />
+            <div>
+              <h3 class="font-bold text-white text-sm">${coin.name}</h3>
+              <p class="text-xs text-slate-400 uppercase font-mono">${coin.symbol}</p>
+            </div>
           </div>
-        );
+          <div class="text-right">
+            <p class="font-bold font-mono text-sm">$${coin.current_price.toLocaleString()}</p>
+            <p class="text-xs font-semibold font-mono ${priceUp ? 'text-emerald-400' : 'text-red-400'}">
+              ${priceUp ? '▲' : '▼'} ${Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
+            </p>
+          </div>
+        `;
+        container.appendChild(button);
+      });
+    }
+
+    function selectCrypto(coinId) {
+      const coin = globalMarketData.find(c => c.id === coinId);
+      if (!coin) return;
+
+      // Reset selection styling across all elements
+      document.querySelectorAll('.asset-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-900', 'border-emerald-500/50', 'shadow-md', 'shadow-emerald-500/5');
+        btn.classList.add('bg-slate-900/50', 'border-slate-800');
+      });
+
+      // Highlight active button selection
+      const activeBtn = document.getElementById(`btn-${coinId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-900/50', 'border-slate-800');
+        activeBtn.classList.add('bg-slate-900', 'border-emerald-500/50', 'shadow-md', 'shadow-emerald-500/5');
       }
 
-      return (
-        <div class="max-w-6xl mx-auto p-4 md:p-8">
-          {/* Header Dashboard panel */}
-          <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-6 gap-4">
-            <div>
-              <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                📈 MarketPulse <span class="text-xs bg-emerald-500/10 text-emerald-400 font-medium px-2.5 py-0.5 rounded-full border border-emerald-500/20">Live</span>
-              </h1>
-              <p class="text-sm text-slate-400 mt-1">Real-time asset tracking overview powered by CoinGecko API</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-slate-500">Last updated: Just now</p>
-              <p class="text-xs text-slate-500">Auto-refreshes every 60 seconds</p>
-            </div>
-          </header>
+      // Update Dashboard Meta nodes
+      const iconEl = document.getElementById('active-icon');
+      iconEl.src = coin.image;
+      iconEl.classList.remove('hidden');
+      document.getElementById('active-title').innerText = `${coin.name} Overview`;
+      document.getElementById('active-price').innerText = `$${coin.current_price.toLocaleString()}`;
+      
+      const changeEl = document.getElementById('active-change');
+      const isPositive = coin.price_change_percentage_24h >= 0;
+      changeEl.innerText = `${isPositive ? '+' : ''}${coin.price_change_percentage_24h.toFixed(2)}% (24h)`;
+      changeEl.className = `text-sm font-bold font-mono ${isPositive ? 'text-emerald-400' : 'text-red-400'}`;
 
-          {/* Grid Layout Section */}
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Sidebar Left Side: Asset list selections */}
-            <div class="lg:col-span-1 flex flex-col gap-3">
-              <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 px-1">Watchlist</h2>
-              {marketData.map((coin) => {
-                const priceUp = coin.price_change_percentage_24h >= 0;
-                const isSelected = selectedCrypto?.id === coin.id;
+      document.getElementById('stat-cap').innerText = `$${coin.market_cap.toLocaleString()}`;
+      document.getElementById('stat-high').innerText = `$${coin.high_24h.toLocaleString()}`;
+      document.getElementById('stat-low').innerText = `$${coin.low_24h.toLocaleString()}`;
 
-                return (
-                  <button
-                    key={coin.id}
-                    onClick={() => setSelectedCrypto(coin)}
-                    class={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
-                      isSelected 
-                        ? 'bg-slate-900 border-emerald-500/50 shadow-md shadow-emerald-500/5' 
-                        : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div class="flex items-center gap-3">
-                      <img src={coin.image} alt={coin.name} class="w-8 h-8 rounded-full" />
-                      <div>
-                        <h3 class="font-bold text-white text-sm">{coin.name}</h3>
-                        <p class="text-xs text-slate-400 uppercase font-mono">{coin.symbol}</p>
-                      </div>
-                    </div>
-                    <div class="text-right">
-                      <p class="font-bold font-mono text-sm">${coin.current_price.toLocaleString()}</p>
-                      <p class={`text-xs font-semibold font-mono ${priceUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {priceUp ? '▲' : '▼'} {Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+      // Build Financial Trend Graphic Canvas
+      renderChart(coin);
+    }
 
-            {/* Main Center Area: Asset Chart details */}
-            <div class="lg:col-span-2 flex flex-col bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-              {selectedCrypto && (
-                <>
-                  <div class="flex justify-between items-start mb-6">
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <img src={selectedCrypto.image} alt={selectedCrypto.name} class="w-6 h-6" />
-                        <h2 class="text-xl font-bold text-white">{selectedCrypto.name} Overview</h2>
-                      </div>
-                      <div class="flex items-baseline gap-3 mt-2">
-                        <span class="text-3xl font-black font-mono">${selectedCrypto.current_price.toLocaleString()}</span>
-                        <span class={`text-sm font-bold font-mono ${selectedCrypto.price_change_percentage_24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {selectedCrypto.price_change_percentage_24h >= 0 ? '+' : ''}{selectedCrypto.price_change_percentage_24h.toFixed(2)}% (24h)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+    function renderChart(coin) {
+      if (currentChart) {
+        currentChart.destroy();
+      }
 
-                  {/* Financial Graph Canvas Anchor */}
-                  <div class="grow min-h-[300px] w-full relative">
-                    <canvas ref={chartRef}></canvas>
-                  </div>
+      const ctx = document.getElementById('cryptoChart').getContext('2d');
+      const sparklineData = coin.sparkline_in_7d.price;
+      const labels = sparklineData.map((_, i) => i);
+      const isPositive = coin.price_change_percentage_24h >= 0;
+      const mainColor = isPositive ? '#10b981' : '#ef4444';
 
-                  {/* Bottom Stats Breakdown panel */}
-                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-800/60 text-xs">
-                    <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
-                      <p class="text-slate-500 font-medium mb-1">Market Cap</p>
-                      <p class="font-bold font-mono text-slate-300">${selectedCrypto.market_cap.toLocaleString()}</p>
-                    </div>
-                    <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
-                      <p class="text-slate-500 font-medium mb-1">24h High</p>
-                      <p class="font-bold font-mono text-emerald-400">${selectedCrypto.high_24h.toLocaleString()}</p>
-                    </div>
-                    <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900 col-span-2 sm:col-span-1">
-                      <p class="text-slate-500 font-medium mb-1">24h Low</p>
+      currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: sparklineData,
+            borderColor: mainColor,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.2,
+            fill: true,
+            backgroundColor: () => {
+              const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+              gradient.addColorStop(0, isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)');
+              gradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
+              return gradient;
+            }
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { display: false },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8', callback: (val) => '$' + val.toLocaleString() }
+            }
+          }
+        }
+      });
+    }
+
+    // Run pipeline setup script loops
+    fetchMarketData();
+    setInterval(fetchMarketData, 60000);
+  </script>
+</body>
+</html>
