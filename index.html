@@ -3,83 +3,374 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crypto & Market Dashboard</title>
+  <title>MarketPulse - Premium Financial Dashboard</title>
   
-  <!-- Tailwind CSS Stable v3 -->
-  <script src="https://tailwindcss.com"></script>
-
   <!-- Chart.js via CDN -->
   <script src="https://jsdelivr.net"></script>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
 
-  <!-- Loading Screen Overlay -->
-  <div id="loading" class="flex items-center justify-center h-screen fixed inset-0 bg-slate-950 z-50 transition-opacity duration-300">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+  <!-- Premium Native CSS Styling -->
+  <style>
+    :root {
+      --bg-main: #020617;
+      --bg-card: #0f172a;
+      --bg-card-hover: #1e293b;
+      --border-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --color-emerald: #10b981;
+      --color-rose: #f43f5e;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      box-sizing: border-box;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      background-color: var(--bg-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.3s ease, pointer-events 0.3s ease;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(16, 185, 129, 0.1);
+      border-bottom-color: var(--color-emerald);
+      border-radius: 50%;
+      animation: rotation 1s linear infinite;
+    }
+
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      header { flex-direction: row; align-items: center; }
+    }
+
+    .title-area h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-live {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--color-emerald);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      text-transform: uppercase;
+    }
+
+    header p {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .time-tracker {
+      text-align: left;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (min-width: 768px) {
+      .time-tracker { text-align: right; }
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .grid-layout { grid-template-columns: 350px 1fr; }
+    }
+
+    .watchlist-section h2 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin: 0 0 12px 4px;
+    }
+
+    .watchlist-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .asset-btn {
+      background-color: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: left;
+      width: 100%;
+    }
+
+    .asset-btn:hover {
+      border-color: #334155;
+      background-color: var(--bg-card-hover);
+    }
+
+    .asset-btn.active {
+      background-color: var(--bg-card);
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.05);
+    }
+
+    .asset-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .asset-meta img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+
+    .asset-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+
+    .asset-symbol {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-family: monospace;
+      margin: 2px 0 0 0;
+    }
+
+    .asset-values {
+      text-align: right;
+    }
+
+    .asset-price {
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    .price-change {
+      font-size: 12px;
+      font-weight: 600;
+      font-family: monospace;
+      margin: 2px 0 0 0;
+    }
+
+    .text-green { color: var(--color-emerald); }
+    .text-red { color: var(--color-rose); }
+
+    .chart-panel {
+      background-color: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .chart-title-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chart-title-box img {
+      width: 28px;
+      height: 28px;
+    }
+
+    .chart-title-box h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .chart-hero-price {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .hero-price {
+      font-size: 32px;
+      font-weight: 900;
+      font-family: monospace;
+    }
+
+    .hero-change {
+      font-size: 14px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .chart-wrapper {
+      flex-grow: 1;
+      min-height: 320px;
+      position: relative;
+      width: 100%;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(30, 41, 59, 0.6);
+    }
+
+    @media (min-width: 640px) {
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      .span-full-mobile { grid-column: auto; }
+    }
+
+    @media (max-width: 639px) {
+      .span-full-mobile { grid-column: span 2; }
+    }
+
+    .stat-card {
+      background-color: rgba(2, 6, 23, 0.4);
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #0f172a;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 14px;
+      color: #cbd5e1;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading State Panel Overlay -->
+  <div id="loading">
+    <div class="spinner"></div>
   </div>
 
-  <div class="max-w-6xl mx-auto p-4 md:p-8">
-    <!-- Header Dashboard panel -->
-    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-6 gap-4">
-      <div>
-        <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-          📈 MarketPulse <span class="text-xs bg-emerald-500/10 text-emerald-400 font-medium px-2.5 py-0.5 rounded-full border border-emerald-500/20">Live</span>
-        </h1>
-        <p class="text-sm text-slate-400 mt-1">Real-time asset tracking overview powered by CoinGecko API</p>
+  <div class="dashboard-container">
+    <header>
+      <div class="title-area">
+        <h1>📈 MarketPulse <span class="badge-live">Live</span></h1>
+        <p>Real-time asset tracking overview powered by CoinGecko API</p>
       </div>
-      <div class="text-right">
-        <p class="text-xs text-slate-500">Auto-refreshes every 60 seconds</p>
+      <div class="time-tracker">
+        <div style="opacity: 0.6;">System Active Connection</div>
+        <div style="font-weight: 600; margin-top: 2px;">Auto-refreshes every 60s</div>
       </div>
     </header>
 
-    <!-- Grid Layout Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Sidebar Left Side: Asset list selections -->
-      <div class="lg:col-span-1 flex flex-col gap-3">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 px-1">Watchlist</h2>
-        <div id="watchlist" class="flex flex-col gap-3">
-          <!-- Crypto buttons will be injected here inject -->
-        </div>
+    <div class="grid-layout">
+      <div class="watchlist-section">
+        <h2>Watchlist</h2>
+        <div id="watchlist" class="watchlist-list"></div>
       </div>
 
-      <!-- Main Center Area: Asset Chart details -->
-      <div class="lg:col-span-2 flex flex-col bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-        <div class="flex justify-between items-start mb-6">
+      <div class="chart-panel">
+        <div class="chart-header">
           <div>
-            <div class="flex items-center gap-2">
-              <img id="active-icon" src="" alt="" class="w-6 h-6 hidden" />
-              <h2 id="active-title" class="text-xl font-bold text-white">Select an Asset</h2>
+            <div class="chart-title-box">
+              <img id="active-icon" src="" alt="" style="display: none;" />
+              <h2 id="active-title">Select an Asset</h2>
             </div>
-            <div class="flex items-baseline gap-3 mt-2">
-              <span id="active-price" class="text-3xl font-black font-mono"></span>
-              <span id="active-change" class="text-sm font-bold font-mono"></span>
+            <div class="chart-hero-price">
+              <span id="active-price" class="hero-price"></span>
+              <span id="active-change" class="hero-change"></span>
             </div>
           </div>
         </div>
 
-        <!-- Financial Graph Canvas Anchor -->
-        <div class="grow min-h-[300px] w-full relative">
+        <div class="chart-wrapper">
           <canvas id="cryptoChart"></canvas>
         </div>
 
-        <!-- Bottom Stats Breakdown panel -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-800/60 text-xs">
-          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
-            <p class="text-slate-500 font-medium mb-1">Market Cap</p>
-            <p id="stat-cap" class="font-bold font-mono text-slate-300">--</p>
+        <div class="stats-row">
+          <div class="stat-card">
+            <p class="stat-label">Market Cap</p>
+            <p id="stat-cap" class="stat-value">--</p>
           </div>
-          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900">
-            <p class="text-slate-500 font-medium mb-1">24h High</p>
-            <p id="stat-high" class="font-bold font-mono text-emerald-400">--</p>
+          <div class="stat-card">
+            <p class="stat-label">24h High</p>
+            <p id="stat-high" class="stat-value text-green">--</p>
           </div>
-          <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-900 col-span-2 sm:col-span-1">
-            <p class="text-slate-500 font-medium mb-1">24h Low</p>
-            <p id="stat-low" class="font-bold font-mono text-red-400">--</p>
+          <div class="stat-card span-full-mobile">
+            <p class="stat-label">24h Low</p>
+            <p id="stat-low" class="stat-value text-red">--</p>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -98,15 +389,15 @@
         
         renderWatchlist();
         
-        // Auto-select first coin on initial boot
         if (data.length > 0) {
           selectCrypto(data[0].id);
         }
 
-        // Hide loader interface
-        document.getElementById('loading').classList.add('opacity-0', 'pointer-events-none');
+        const loader = document.getElementById('loading');
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 300);
       } catch (error) {
-        console.error("API error or rate limit hit:", error);
+        console.error("Connection rate limits triggered:", error);
       }
     }
 
@@ -117,114 +408,8 @@
       globalMarketData.forEach(coin => {
         const priceUp = coin.price_change_percentage_24h >= 0;
         const button = document.createElement('button');
-        button.className = `w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all bg-slate-900/50 border-slate-800 hover:border-slate-700 asset-btn`;
+        button.className = `asset-btn`;
         button.id = `btn-${coin.id}`;
         button.onclick = () => selectCrypto(coin.id);
 
         button.innerHTML = `
-          <div class="flex items-center gap-3">
-            <img src="${coin.image}" alt="${coin.name}" class="w-8 h-8 rounded-full" />
-            <div>
-              <h3 class="font-bold text-white text-sm">${coin.name}</h3>
-              <p class="text-xs text-slate-400 uppercase font-mono">${coin.symbol}</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="font-bold font-mono text-sm">$${coin.current_price.toLocaleString()}</p>
-            <p class="text-xs font-semibold font-mono ${priceUp ? 'text-emerald-400' : 'text-red-400'}">
-              ${priceUp ? '▲' : '▼'} ${Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
-            </p>
-          </div>
-        `;
-        container.appendChild(button);
-      });
-    }
-
-    function selectCrypto(coinId) {
-      const coin = globalMarketData.find(c => c.id === coinId);
-      if (!coin) return;
-
-      // Reset selection styling across all elements
-      document.querySelectorAll('.asset-btn').forEach(btn => {
-        btn.classList.remove('bg-slate-900', 'border-emerald-500/50', 'shadow-md', 'shadow-emerald-500/5');
-        btn.classList.add('bg-slate-900/50', 'border-slate-800');
-      });
-
-      // Highlight active button selection
-      const activeBtn = document.getElementById(`btn-${coinId}`);
-      if (activeBtn) {
-        activeBtn.classList.remove('bg-slate-900/50', 'border-slate-800');
-        activeBtn.classList.add('bg-slate-900', 'border-emerald-500/50', 'shadow-md', 'shadow-emerald-500/5');
-      }
-
-      // Update Dashboard Meta nodes
-      const iconEl = document.getElementById('active-icon');
-      iconEl.src = coin.image;
-      iconEl.classList.remove('hidden');
-      document.getElementById('active-title').innerText = `${coin.name} Overview`;
-      document.getElementById('active-price').innerText = `$${coin.current_price.toLocaleString()}`;
-      
-      const changeEl = document.getElementById('active-change');
-      const isPositive = coin.price_change_percentage_24h >= 0;
-      changeEl.innerText = `${isPositive ? '+' : ''}${coin.price_change_percentage_24h.toFixed(2)}% (24h)`;
-      changeEl.className = `text-sm font-bold font-mono ${isPositive ? 'text-emerald-400' : 'text-red-400'}`;
-
-      document.getElementById('stat-cap').innerText = `$${coin.market_cap.toLocaleString()}`;
-      document.getElementById('stat-high').innerText = `$${coin.high_24h.toLocaleString()}`;
-      document.getElementById('stat-low').innerText = `$${coin.low_24h.toLocaleString()}`;
-
-      // Build Financial Trend Graphic Canvas
-      renderChart(coin);
-    }
-
-    function renderChart(coin) {
-      if (currentChart) {
-        currentChart.destroy();
-      }
-
-      const ctx = document.getElementById('cryptoChart').getContext('2d');
-      const sparklineData = coin.sparkline_in_7d.price;
-      const labels = sparklineData.map((_, i) => i);
-      const isPositive = coin.price_change_percentage_24h >= 0;
-      const mainColor = isPositive ? '#10b981' : '#ef4444';
-
-      currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: sparklineData,
-            borderColor: mainColor,
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.2,
-            fill: true,
-            backgroundColor: () => {
-              const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-              gradient.addColorStop(0, isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)');
-              gradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
-              return gradient;
-            }
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { display: false },
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#94a3b8', callback: (val) => '$' + val.toLocaleString() }
-            }
-          }
-        }
-      });
-    }
-
-    // Run pipeline setup script loops
-    fetchMarketData();
-    setInterval(fetchMarketData, 60000);
-  </script>
-</body>
-</html>
