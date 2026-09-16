@@ -21,3 +21,24 @@
 ---
 
 ## 🔧 Installation & Launch
+
+1. Download or copy the `index.html` file into your computer.
+2. Double-click `index.html` or open it natively using **Google Chrome**.
+3. Explore live asset charts immediately.
+
+---
+
+## 🛠️ Built With
+
+- **Vanilla JavaScript** - Clean async API pipelines and browser-native event handler loops.
+- **Chart.js** - Robust, high-performance financial data visualizations and canvas gradient fills.
+- **Native CSS3** - Custom futuristic dark-mode user interface tokens requiring zero compilation layers.
+
+---
+
+## 🎯 Next Milestone (Roadmap)
+- [ ] Implement search toggle options for custom ticker selection.
+- [ ] Connect multi-asset stock parameters alongside core crypto lists.
+
+---
+Developed for portfolio purposes. Feel free to leave a ⭐️ if you find this project interesting!
