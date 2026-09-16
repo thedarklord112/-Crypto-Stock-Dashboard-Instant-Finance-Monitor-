@@ -23,7 +23,7 @@
 ## 🔧 Installation & Launch
 
 1. Download or copy the `index.html` file into your computer.
-2. Double-click `index.html` or open it natively using **Google Chrome**.
+2. Double-click `index.html` or open it natively using **Google Chrome**. After you open it, it probably will take 5 minutes to load or something like this idk
 3. Explore live asset charts immediately.
 
 ---
