@@ -1,5 +1,7 @@
-```markdown
+
 # 📈 MarketPulse (Crypto Dashboard)
+
+<img width="1456" height="720" alt="image" src="https://github.com/user-attachments/assets/a5c9c6d8-883a-4149-8291-e2725e4ed3f7" />
 
 ![License](https://shields.io)
 ![Chrome](https://shields.io)
